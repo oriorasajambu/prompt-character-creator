@@ -1,7 +1,7 @@
 package com.promptgenerator
 
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -61,14 +61,15 @@ class PromptGenerator {
             throw PromptGeneratorException("No templates were selected.")
         }
 
-        val plannedOutputs = selected.map { (name, template) ->
-            validateTemplate(name, template)
-            PlannedOutput(
-                templateName = name,
-                path = options.outputDirectory.resolve("${sanitizeFileName(name)}.txt"),
-                prompts = characters.map { template.replace(CHARACTER_TOKEN, it) },
-            )
-        }
+        val plannedOutputs =
+            selected.map { (name, template) ->
+                validateTemplate(name, template)
+                PlannedOutput(
+                    templateName = name,
+                    path = options.outputDirectory.resolve("${sanitizeFileName(name)}.txt"),
+                    prompts = characters.map { template.replace(CHARACTER_TOKEN, it) },
+                )
+            }
 
         checkOutputDirectory(options.outputDirectory)
         checkOutputCollisions(plannedOutputs)
@@ -82,13 +83,14 @@ class PromptGenerator {
     }
 
     private fun readCharacters(path: Path): List<String> {
-        val characters = readUtf8(path).lineSequence()
-            .map(String::trim)
-            .filter { it.isNotEmpty() && !it.startsWith("#") }
-            .toList()
+        val characters =
+            readUtf8(path).lineSequence()
+                .map(String::trim)
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+                .toList()
 
         if (characters.isEmpty()) {
-            throw PromptGeneratorException("No characters found in '${path}'.")
+            throw PromptGeneratorException("No characters found in '$path'.")
         }
 
         val duplicates = characters.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
@@ -101,7 +103,7 @@ class PromptGenerator {
         return try {
             json.decodeFromString<TemplateCatalog>(text).templates.mapValues { it.value.prompt }
         } catch (exception: SerializationException) {
-            throw PromptGeneratorException("Invalid templates JSON in '${path}': ${exception.message}", exception)
+            throw PromptGeneratorException("Invalid templates JSON in '$path': ${exception.message}", exception)
         }
     }
 
@@ -121,7 +123,10 @@ class PromptGenerator {
         return selectedNames.distinct().map { it to templates.getValue(it) }
     }
 
-    private fun validateTemplate(name: String, template: String) {
+    private fun validateTemplate(
+        name: String,
+        template: String,
+    ) {
         if (name.isBlank()) {
             throw PromptGeneratorException("Template names must not be blank.")
         }
@@ -143,19 +148,24 @@ class PromptGenerator {
     }
 
     private fun checkOutputCollisions(outputs: List<PlannedOutput>) {
-        val collision = outputs.groupBy { it.path.fileName.toString().lowercase(Locale.ROOT) }
-            .entries.firstOrNull { it.value.size > 1 }
+        val collision =
+            outputs.groupBy { it.path.fileName.toString().lowercase(Locale.ROOT) }
+                .entries.firstOrNull { it.value.size > 1 }
         if (collision != null) {
             val names = collision.value.joinToString { it.templateName }
             throw PromptGeneratorException("Template names produce a case-insensitive filename collision: $names.")
         }
     }
 
-    private fun checkExistingOutputs(outputs: List<PlannedOutput>, overwrite: Boolean) {
-        val invalidDestination = outputs.firstOrNull {
-            Files.exists(it.path, LinkOption.NOFOLLOW_LINKS) &&
-                !Files.isRegularFile(it.path, LinkOption.NOFOLLOW_LINKS)
-        }
+    private fun checkExistingOutputs(
+        outputs: List<PlannedOutput>,
+        overwrite: Boolean,
+    ) {
+        val invalidDestination =
+            outputs.firstOrNull {
+                Files.exists(it.path, LinkOption.NOFOLLOW_LINKS) &&
+                    !Files.isRegularFile(it.path, LinkOption.NOFOLLOW_LINKS)
+            }
         if (invalidDestination != null) {
             throw PromptGeneratorException("Output destination '${invalidDestination.path}' is not a regular file.")
         }
@@ -169,18 +179,23 @@ class PromptGenerator {
         }
     }
 
-    private fun writeOutputs(plan: GenerationPlan, directory: Path, overwrite: Boolean) {
+    private fun writeOutputs(
+        plan: GenerationPlan,
+        directory: Path,
+        overwrite: Boolean,
+    ) {
         val completed = mutableListOf<Path>()
         var writing: Path? = null
         try {
             Files.createDirectories(directory)
             plan.outputs.forEach { output ->
                 val contents = output.prompts.joinToString(System.lineSeparator())
-                val options = if (overwrite) {
-                    arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)
-                } else {
-                    arrayOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-                }
+                val options =
+                    if (overwrite) {
+                        arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)
+                    } else {
+                        arrayOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+                    }
                 writing = output.path
                 Files.writeString(output.path, contents, StandardCharsets.UTF_8, *options)
                 completed.add(output.path)
@@ -205,11 +220,12 @@ class PromptGenerator {
     }
 
     private fun readUtf8(path: Path): String {
-        val bytes = try {
-            Files.readAllBytes(path)
-        } catch (exception: IOException) {
-            throw PromptGeneratorException("Could not read '${path}': ${exception.message}", exception)
-        }
+        val bytes =
+            try {
+                Files.readAllBytes(path)
+            } catch (exception: IOException) {
+                throw PromptGeneratorException("Could not read '$path': ${exception.message}", exception)
+            }
 
         return try {
             StandardCharsets.UTF_8.newDecoder()
@@ -219,13 +235,14 @@ class PromptGenerator {
                 .toString()
                 .removePrefix("\uFEFF")
         } catch (exception: CharacterCodingException) {
-            throw PromptGeneratorException("Input '${path}' is not valid UTF-8.", exception)
+            throw PromptGeneratorException("Input '$path' is not valid UTF-8.", exception)
         }
     }
 
     private companion object {
         const val CHARACTER_TOKEN = "{{character}}"
-        val WINDOWS_RESERVED_NAMES = setOf("CON", "PRN", "AUX", "NUL") +
-            (1..9).map { "COM$it" } + (1..9).map { "LPT$it" }
+        val WINDOWS_RESERVED_NAMES =
+            setOf("CON", "PRN", "AUX", "NUL") +
+                (1..9).map { "COM$it" } + (1..9).map { "LPT$it" }
     }
 }

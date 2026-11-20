@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  package:
+    name: Validate and package Windows release
+    runs-on: windows-2022
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Validate release tag and source branch
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -notmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
+            throw "Tag '$tag' must use vMAJOR.MINOR.PATCH."
+          }
+          git fetch origin main
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch main." }
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) { throw "Tag '$tag' does not point to a commit reachable from main." }
+          $buildFile = Get-Content .\build.gradle.kts -Raw
+          $match = [regex]::Match($buildFile, '(?m)^version\s*=\s*"([^"]+)"\s*$')
+          if (-not $match.Success -or "v$($match.Groups[1].Value)" -ne $tag) {
+            throw "Tag '$tag' must match project.version in build.gradle.kts."
+          }
+      - name: Set up Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Run tests, lint, and package
+        run: .\gradlew.bat clean test ktlintCheck packageWindows
+      - name: Smoke-test packaged executable
+        shell: pwsh
+        run: .\scripts\smoke-windows-package.ps1 -AppImagePath .\build\windows\PromptGenerator
+      - name: Create SHA-256 checksum
+        shell: pwsh
+        run: |
+          $zip = Resolve-Path .\build\windows\PromptGenerator-windows-x64.zip
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("$zip.sha256", "$hash  $(Split-Path $zip -Leaf)`n", [Text.Encoding]::ASCII)
+      - name: Upload release files for approval
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PromptGenerator-windows-x64
+          path: |
+            build/windows/PromptGenerator-windows-x64.zip
+            build/windows/PromptGenerator-windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: windows-2022
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download approved release files
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: PromptGenerator-windows-x64
+          path: release-files
+      - name: Create published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          gh release view $env:TAG_NAME *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release '$env:TAG_NAME' already exists." }
+          gh release create $env:TAG_NAME `
+            .\release-files\PromptGenerator-windows-x64.zip `
+            .\release-files\PromptGenerator-windows-x64.zip.sha256 `
+            --verify-tag `
+            --generate-notes `
+            --title $env:TAG_NAME
+          if ($LASTEXITCODE -ne 0) { throw "GitHub Release creation failed." }

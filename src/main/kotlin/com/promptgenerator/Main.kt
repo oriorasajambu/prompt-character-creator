@@ -1,13 +1,13 @@
 package com.promptgenerator
 
-import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Abort
+import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.main
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
+import com.github.ajalt.clikt.parameters.options.option
 import java.nio.file.Path
 
 class GenerateCommand : CliktCommand(name = "prompt-generator") {
@@ -30,14 +30,15 @@ class GenerateCommand : CliktCommand(name = "prompt-generator") {
     override fun run() {
         try {
             val paths = if (interactive) promptForPaths() else Triple(charactersPath, templatesPath, outputDirectory)
-            val options = GeneratorOptions(
-                charactersPath = Path.of(paths.first),
-                templatesPath = Path.of(paths.second),
-                outputDirectory = Path.of(paths.third),
-                selectedTemplates = selectedTemplates,
-                overwrite = overwrite,
-                dryRun = dryRun,
-            )
+            val options =
+                GeneratorOptions(
+                    charactersPath = Path.of(paths.first),
+                    templatesPath = Path.of(paths.second),
+                    outputDirectory = Path.of(paths.third),
+                    selectedTemplates = selectedTemplates,
+                    overwrite = overwrite,
+                    dryRun = dryRun,
+                )
             val plan = PromptGenerator().generate(options)
 
             if (dryRun) {
@@ -68,7 +69,10 @@ class GenerateCommand : CliktCommand(name = "prompt-generator") {
         return Triple(characters, templates, output)
     }
 
-    private fun readPrompt(label: String, default: String): String {
+    private fun readPrompt(
+        label: String,
+        default: String,
+    ): String {
         print("$label [$default]: ")
         System.out.flush()
         val value = readLine() ?: throw PromptGeneratorException("Interactive input ended unexpectedly.")

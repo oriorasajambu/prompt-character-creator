@@ -85,3 +85,17 @@ cd .\PromptGenerator
 
 The app-image is a Windows console application. Code signing and an installer
 are not included.
+
+## CI and releases
+
+Pull requests targeting `main` and pushes to `main` run Windows CI on Java 17:
+tests, ktlint, Gradle wrapper validation, and dependency review. Changes limited
+to Markdown documentation skip the Gradle checks while retaining the required
+`CI summary` status. Use the CI workflow's manual dispatch to build and download
+a Windows package artifact without publishing a release.
+
+Pushing a `vMAJOR.MINOR.PATCH` tag for a commit reachable from `main` starts
+release validation and Windows packaging. After approval in the `release`
+environment, the workflow publishes the ZIP and its SHA-256 checksum with
+generated release notes. The tag must match `project.version` in
+`build.gradle.kts`.

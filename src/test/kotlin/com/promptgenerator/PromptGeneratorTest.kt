@@ -5,9 +5,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 
 class PromptGeneratorTest {
     @Test
@@ -17,14 +16,27 @@ class PromptGeneratorTest {
         val templates = directory.resolve("templates.json")
         val output = directory.resolve("out")
         Files.writeString(characters, "\uFEFF # comment\n Alice \n\nBob\n", StandardCharsets.UTF_8)
-        Files.writeString(
-            templates,
-            """{"metadata":"ignored","templates":{"basic":{"prompt":"A portrait of {{character}}","notes":"ignored"},"other":{"prompt":"A pose: {{character}}"}}}""",
-        )
+        val templateJson =
+            """
+            {
+              "metadata": "ignored",
+              "templates": {
+                "basic": {
+                  "prompt": "A portrait of {{character}}",
+                  "notes": "ignored"
+                },
+                "other": {
+                  "prompt": "A pose: {{character}}"
+                }
+              }
+            }
+            """.trimIndent()
+        Files.writeString(templates, templateJson)
 
-        val plan = PromptGenerator().generate(
-            GeneratorOptions(characters, templates, output, selectedTemplates = listOf("other", "other")),
-        )
+        val plan =
+            PromptGenerator().generate(
+                GeneratorOptions(characters, templates, output, selectedTemplates = listOf("other", "other")),
+            )
 
         assertEquals(2, plan.totalPrompts)
         assertEquals(listOf("A pose: Alice", "A pose: Bob"), Files.readAllLines(output.resolve("other.txt")))
@@ -33,13 +45,15 @@ class PromptGeneratorTest {
 
     @Test
     fun `dry run validates and reports paths without creating files`() {
-        val (characters, templates, output) = fixture(
-            """{"templates":{"default":{"prompt":"{{character}}"},"alternate":{"prompt":"Alt: {{character}}"}}}""",
-        )
+        val (characters, templates, output) =
+            fixture(
+                """{"templates":{"default":{"prompt":"{{character}}"},"alternate":{"prompt":"Alt: {{character}}"}}}""",
+            )
 
-        val plan = PromptGenerator().generate(
-            GeneratorOptions(characters, templates, output, dryRun = true),
-        )
+        val plan =
+            PromptGenerator().generate(
+                GeneratorOptions(characters, templates, output, dryRun = true),
+            )
 
         assertEquals(4, plan.totalPrompts)
         assertEquals(listOf("default.txt", "alternate.txt"), plan.outputs.map { it.path.fileName.toString() })

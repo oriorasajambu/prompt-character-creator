@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.1.20"
     kotlin("plugin.serialization") version "2.1.20"
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
     application
 }
 
@@ -35,9 +36,10 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
-val jdk17Home = javaToolchains.launcherFor {
-    languageVersion.set(JavaLanguageVersion.of(17))
-}.map { it.metadata.installationPath.asFile.absolutePath }
+val jdk17Home =
+    javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }.map { it.metadata.installationPath.asFile.absolutePath }
 
 tasks.register<Exec>("packageWindows") {
     group = "distribution"
