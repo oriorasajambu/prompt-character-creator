@@ -1,0 +1,7 @@
+{
+  "templates": {
+    "classic": {
+      "prompt": "embedding:lazypos, embedding:lazynsfw, (masterpiece:1.3), (best quality:1.2), (extremely detailed:1.3), ultra-detailed textures, (intricate details:1.2), cinematic fidelity, sharp focus, film grain, cowboy shot, from side, 1girl, mature female, ({{character}}:1.3), sitting, crossed legs, looking at viewer, smile, multicolored clothes, gacha splash art, vertical composition, soft atmospheric depth, addmicrodetails"
+    }
+  }
+}

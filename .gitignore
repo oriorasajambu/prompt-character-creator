@@ -1,0 +1,16 @@
+.gradle/
+.kotlin/
+build/
+generated/
+
+# IDE and editor files
+.idea/
+*.iml
+out/
+
+# Local machine and operating-system files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
