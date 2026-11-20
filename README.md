@@ -56,3 +56,32 @@ exactly one `{{character}}` placeholder. Unknown JSON fields are ignored.
 Output filenames are derived from template names and sanitized for portable
 use. Each output file contains only prompts, one per line, in character-list
 order. Input and output text uses UTF-8; generated files do not include a BOM.
+
+## Portable Windows app
+
+On Windows, build a portable app-image with its own Java runtime and a ZIP
+archive:
+
+```powershell
+.\gradlew.bat packageWindows
+```
+
+The task requires a full JDK 17 toolchain with `jpackage` and `jmods`; Gradle
+can provision the JDK toolchain if needed. It produces:
+
+- `build\windows\PromptGenerator\PromptGenerator.exe` and the bundled runtime
+- `build\windows\PromptGenerator-windows-x64.zip`
+
+Extract the ZIP, then run `PromptGenerator.exe` from the extracted
+`PromptGenerator` directory so its default `characters.txt`, `templates.json`,
+and `generated\` paths resolve beside the launcher. The input files are
+included in the bundle and can be edited. For example:
+
+```powershell
+cd .\PromptGenerator
+.\PromptGenerator.exe --help
+.\PromptGenerator.exe --output-dir generated
+```
+
+The app-image is a Windows console application. Code signing and an installer
+are not included.
